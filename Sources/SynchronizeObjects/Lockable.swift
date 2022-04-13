@@ -21,7 +21,7 @@ public protocol Lockable {
     func lockingFor<T>(_ block: @escaping () throws -> T) throws -> T
 }
 
-extension NSLock: Lockable {
+extension NSLocking {
     public func lockingFor(_ block: @escaping () -> Void) {
         self.lock()
         defer { self.unlock() }
@@ -43,6 +43,9 @@ extension NSLock: Lockable {
         return try block()
     }
 }
+
+extension NSLock: Lockable { }
+extension NSRecursiveLock: Lockable { }
 
 extension OperationQueue: Lockable {
     /// An operation used to execute code block in OperationQueue and wait for completion

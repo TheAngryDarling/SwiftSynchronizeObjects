@@ -55,45 +55,75 @@ class SynchronizeObjectsTests: XCTestCase {
             }
         }
 
-        let lock1 = NSLock()
-        let lock2 = DispatchQueue(label: "Lock2")
-        let lock3 = OperationQueue()
-
-        test(using: lock1)
-        test(using: lock2)
-        test(using: lock3)
-
-        lock1.lockingFor {
-            // just testing convienience call
+        let locks: [Lockable] = [NSLock(),
+                                 NSRecursiveLock(),
+                                 DispatchQueue(label: "Lock2"),
+                                 OperationQueue()
+        ]
+        
+        for lock in locks  {
+            test(using: lock)
+            lock.lockingFor {
+                // just testing convienience call
+            }
         }
-
-        lock2.lockingFor {
-            // just testing convienience call
-        }
-
-        lock3.lockingFor {
-            // just testing convienience call
-        }
+        
     }
     
     func testSyncObj() {
-        let obj1 = SyncLockObj(value: "Testing1")
-        let obj2 = SyncQueueObj(value: "Testing2",
-                                lockingQueueName: "DispatchQueueLocking")
-        let obj3 = SyncOptQueueObj(value: "Testing3",
-                                   lockingQueueName: "OperationQueueLocking")
-
-        XCTAssertEqual(obj1.value, "Testing1")
-        obj1.value = "Replaced1"
-        XCTAssertEqual(obj1.value, "Replaced1")
+        let stringObj1 = SyncLockObj(value: "Testing")
+        let stringObj2 = SyncLockObj(value: "Testing")
+        let stringObj3 = SyncQueueObj(value: "Testing",
+                                      lockingQueueName: "DispatchQueueLocking")
+        let stringObj4 = SyncOptQueueObj(value: "Testing",
+                                         lockingQueueName: "OperationQueueLocking")
         
-        XCTAssertEqual(obj2.value, "Testing2")
-        obj2.value = "Replaced2"
-        XCTAssertEqual(obj2.value, "Replaced2")
+        let stringObjects: [SynchronizableObject<String>] = [
+            stringObj1,
+            stringObj2,
+            stringObj3,
+            stringObj4
+        ]
+        
+        for object in stringObjects {
+            XCTAssertEqual(object.value, "Testing")
+            XCTAssertTrue(object == "Testing")
+            object.value = "Replaced"
+            XCTAssertEqual(object.value, "Replaced")
+            XCTAssertNotEqual(object.value, "Testing")
+            XCTAssertTrue(object == "Replaced")
+            XCTAssertTrue(object != "Testing")
+        }
 
-        XCTAssertEqual(obj3.value, "Testing3")
-        obj3.value = "Replaced3"
-        XCTAssertEqual(obj3.value, "Replaced3")
+        let optStringObj1 = SyncLockObj(value: Optional<String>.none)
+        let optStringObj2 = SyncLockObj(value: Optional<String>.none)
+        let optStringObj3 = SyncQueueObj(value: Optional<String>.none,
+                                      lockingQueueName: "DispatchQueueLocking")
+        let optStringObj4 = SyncOptQueueObj(value: Optional<String>.none,
+                                         lockingQueueName: "OperationQueueLocking")
+        
+        let optStringObjects: [SynchronizableObject<String?>] = [
+            optStringObj1,
+            optStringObj2,
+            optStringObj3,
+            optStringObj4
+        ]
+        
+        for object in optStringObjects {
+            XCTAssertEqual(object.value, nil)
+            
+            #if swift(>=4.1)
+            XCTAssertTrue(object == nil)
+            #endif
+            
+            object.value = "Replaced"
+            XCTAssertEqual(object.value, "Replaced")
+            
+            #if swift(>=4.1)
+            XCTAssertTrue(object == "Replaced")
+            XCTAssertTrue(object != nil)
+            #endif
+        }
     }
 
 

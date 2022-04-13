@@ -146,8 +146,28 @@ public extension SyncObj where Lock == NSLock {
     /// Create new Instance of SyncObj
     /// - Parameters:
     ///   - object: The object to keep in sync
-    convenience init(value: Object) {
-        self.init(value: value, lock: NSLock())
+    ///   - lockName: The name to give the NSLock
+    convenience init(value: Object, lockName: String? = nil) {
+        let lock = NSLock()
+        if let n = lockName {
+            lock.name = n
+        }
+        self.init(value: value, lock: lock)
+    }
+}
+/// Typealias of SyncObj where Lock = NSRecursiveLock
+public typealias SyncRecursiveLockObj<Object> = SyncObj<Object, NSRecursiveLock>
+public extension SyncObj where Lock == NSRecursiveLock {
+    /// Create new Instance of SyncObj
+    /// - Parameters:
+    ///   - object: The object to keep in sync
+    ///   - lockName: The name to give the NSRecursiveLock
+    convenience init(value: Object, lockName: String? = nil) {
+        let lock = NSRecursiveLock()
+        if let n = lockName {
+            lock.name = n
+        }
+        self.init(value: value, lock: lock)
     }
 }
 
