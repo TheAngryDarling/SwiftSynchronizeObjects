@@ -17,12 +17,12 @@ public protocol SynchronizableStorage {
 public class SynchronizableObject<Object>: SynchronizableStorage {
     
     private var _value: Object
-    private let lock: (@escaping () -> Object) -> Object
+    fileprivate let _lock: (@escaping () -> Object) -> Object
     
     /// Synchronized access to the resource
     public var value: Object {
-        get { return self.lock { return self._value } }
-        set { _ = self.lock { self._value = newValue; return newValue } }
+        get { return self._lock { return self._value } }
+        set { _ = self._lock { self._value = newValue; return newValue } }
     }
     /// Access to the resource without synchronization
     public var unsafeValue: Object {
@@ -33,7 +33,14 @@ public class SynchronizableObject<Object>: SynchronizableStorage {
     public init(value: Object,
                 locking: @escaping ( @escaping () -> Object) -> Object) {
         self._value = value
-        self.lock = locking
+        self._lock = locking
+    }
+    /// Method used to lock the resource for the execution of the block
+    public func lockingFor(_ block: @escaping () -> Void) {
+        _ = self._lock {
+           block()
+            return self.unsafeValue
+        }
     }
     
 }
@@ -119,6 +126,27 @@ public extension SynchronizableObject where Object: Numeric {
     }
 }
 
+public extension SynchronizableObject where Object: FixedWidthInteger {
+    /// Increate the value of the resurce by 1 and return the new value
+    func incrementalValue() -> Object {
+        return self._lock {
+            var rtn = self.unsafeValue
+            rtn += 1
+            self.unsafeValue = rtn
+            return rtn
+        }
+    }
+    /// Decrease the value of the resource by 1 and return the new value
+    func decrementalValue() -> Object {
+        return self._lock {
+            var rtn = self.unsafeValue
+            rtn += 1
+            self.unsafeValue = rtn
+            return rtn
+        }
+    }
+}
+
 public extension SynchronizableObject where Object == String {
     static func +=(lhs: inout SynchronizableObject,
                    rhs: SynchronizableObject) {
@@ -132,8 +160,15 @@ public extension SynchronizableObject where Object == String {
  
 /// A Class that can synchronize access to an object
 public class SyncObj<Object, Lock>: SynchronizableObject<Object> where Lock: Lockable {
+    /// the object locking the resource
+    public let lock: Lock
     
+    /// Create new Synchronized Object
+    /// - Parameters:
+    ///   - value: The value of the resource
+    ///   - lock: The object used to synchronize access to the resoruce
     public init(value: Object, lock: Lock) {
+        self.lock = lock
         super.init(value: value) { f in
             return lock.lockingFor(f)
         }
