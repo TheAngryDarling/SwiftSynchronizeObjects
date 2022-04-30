@@ -19,9 +19,12 @@ public protocol Lockable {
     func lockingFor<T>(_ block: @escaping () -> T) -> T
     ///Lock the resource for the duration of the code execution
     func lockingFor<T>(_ block: @escaping () throws -> T) throws -> T
+    /// Create new locking object
+    static func newSyncLockObject() -> Lockable
 }
 
 extension NSLocking {
+    
     public func lockingFor(_ block: @escaping () -> Void) {
         self.lock()
         defer { self.unlock() }
@@ -44,10 +47,64 @@ extension NSLocking {
     }
 }
 
-extension NSLock: Lockable { }
-extension NSRecursiveLock: Lockable { }
+extension NSLock: Lockable {
+    /// The default name giving to the NSLock when creating new SyncLockObject
+    public static var DefaultSyncLockName: String? { return nil }
+    
+    public static func newSyncLockObject(lockName: String?) -> Lockable {
+        let lock = NSLock()
+        if let n = lockName {
+            lock.name = n
+        }
+        return lock
+    }
+    
+    public static func newSyncLockObject() -> Lockable {
+        return NSLock.newSyncLockObject(lockName: NSLock.DefaultSyncLockName)
+    }
+    
+    
+}
+extension NSRecursiveLock: Lockable {
+    /// The default name giving to the NSRecursiveLock when creating new SyncLockObject
+    public static var DefaultSyncLockName: String? { return nil }
+    
+    public static func newSyncLockObject(lockName: String?) -> Lockable {
+        let lock = NSRecursiveLock()
+        if let n = lockName {
+            lock.name = n
+        }
+        return lock
+    }
+    
+    public static func newSyncLockObject() -> Lockable {
+        return NSRecursiveLock.newSyncLockObject(lockName: NSRecursiveLock.DefaultSyncLockName)
+    }
+}
 
 extension OperationQueue: Lockable {
+    
+    /// The default name giving to the OperationQueue when creating new SyncLockObject
+    public static var DefaultSyncLockQueueName: String? { return nil }
+    /// The default QOS to use when creating a new OperationQueue new SyncLockObject
+    public static var DefaultSyncLockQueueQOS: QualityOfService { return .default }
+    
+    public static func newSyncLockObject(lockingQueueName: String?,
+                                           lockingQueueQoS: QualityOfService) -> Lockable {
+        let lock = OperationQueue()
+        if let n = lockingQueueName {
+            lock.name = n
+        }
+        lock.qualityOfService = lockingQueueQoS
+        return lock
+    }
+    
+    public static func newSyncLockObject() -> Lockable {
+        return OperationQueue.newSyncLockObject(lockingQueueName: OperationQueue.DefaultSyncLockQueueName,
+                                               lockingQueueQoS: OperationQueue.DefaultSyncLockQueueQOS)
+    }
+    
+    
     /// An operation used to execute code block in OperationQueue and wait for completion
     private class Op<T>: Operation {
         private let task: () throws -> T
@@ -109,6 +166,24 @@ extension OperationQueue: Lockable {
 }
 
 extension DispatchQueue: Lockable {
+    
+    /// The default name giving to the DispatchQueue when creating SyncLockObject
+    public static var DefaultSyncLockQueueName: String { return "SyncQueueObj.lock" }
+    /// The default QOS to use when creating a new DispatchQueue when creating new SyncLockObject
+    public static var DefaultSyncLockQueueQOS: DispatchQoS { return .unspecified }
+    
+    public static func newSyncLockObject(lockingQueueName: String,
+                                           lockingQueueQoS: DispatchQoS) -> Lockable {
+        return DispatchQueue(label: lockingQueueName,
+                             qos: lockingQueueQoS)
+    }
+    
+    public static func newSyncLockObject() -> Lockable {
+        return DispatchQueue.newSyncLockObject(lockingQueueName: DispatchQueue.DefaultSyncLockQueueName,
+                                               lockingQueueQoS: DispatchQueue.DefaultSyncLockQueueQOS)
+    }
+    
+    
     public func lockingFor(_ block: @escaping () -> Void) {
         self.sync(execute: block)
     }
