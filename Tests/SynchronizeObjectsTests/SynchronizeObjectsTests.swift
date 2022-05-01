@@ -72,7 +72,7 @@ class SynchronizeObjectsTests: XCTestCase {
     
     func testSyncObj() {
         let stringObj1 = SyncLockObj(value: "Testing")
-        let stringObj2 = SyncLockObj(value: "Testing")
+        let stringObj2 = SyncRecursiveLockObj(value: "Testing")
         let stringObj3 = SyncQueueObj(value: "Testing",
                                       lockingQueueName: "DispatchQueueLocking")
         let stringObj4 = SyncOptQueueObj(value: "Testing",
@@ -96,7 +96,7 @@ class SynchronizeObjectsTests: XCTestCase {
         }
 
         let optStringObj1 = SyncLockObj(value: Optional<String>.none)
-        let optStringObj2 = SyncLockObj(value: Optional<String>.none)
+        let optStringObj2 = SyncRecursiveLockObj(value: Optional<String>.none)
         let optStringObj3 = SyncQueueObj(value: Optional<String>.none,
                                       lockingQueueName: "DispatchQueueLocking")
         let optStringObj4 = SyncOptQueueObj(value: Optional<String>.none,
@@ -125,10 +125,83 @@ class SynchronizeObjectsTests: XCTestCase {
             #endif
         }
     }
+    
+    func testOperators() {
+        func testNumericOperators<Number>(_ type: Number.Type) where Number: FixedWidthInteger {
+            var obj = SyncLockObj<Number>(value: 0)
+            XCTAssertEqual(obj.value, 0)
+            XCTAssertTrue(obj == 0)
+            XCTAssertTrue(obj == SyncLockObj<Number>(value: 0))
+            
+            obj += 1
+            XCTAssertEqual(obj.value, 1)
+            XCTAssertTrue(obj == 1)
+            XCTAssertTrue(obj == SyncLockObj<Number>(value: 1))
+            
+            XCTAssertTrue(obj > 0)
+            XCTAssertTrue(obj > SyncLockObj<Number>(value: 0))
+            
+            XCTAssertTrue(obj < 2)
+            XCTAssertTrue(obj < SyncLockObj<Number>(value: 2))
+            
+            obj *= 2
+            XCTAssertEqual(obj.value, 2)
+            XCTAssertTrue(obj == 2)
+            XCTAssertTrue(obj == SyncLockObj<Number>(value: 2))
+            
+            obj -= 1
+            XCTAssertEqual(obj.value, 1)
+            XCTAssertTrue(obj == 1)
+            XCTAssertTrue(obj == SyncLockObj<Number>(value: 1))
+        }
+        
+        testNumericOperators(Int.self)
+        testNumericOperators(UInt.self)
+        
+        var strObj = SyncLockObj<String>(value: "")
+        XCTAssertEqual(strObj.value, "")
+        XCTAssertTrue(strObj == "")
+        XCTAssertTrue(strObj == SyncLockObj<String>(value: ""))
+        
+        strObj += "Test"
+        XCTAssertEqual(strObj.value, "Test")
+        XCTAssertTrue(strObj == "Test")
+        XCTAssertTrue(strObj == SyncLockObj<String>(value: "Test"))
+        
+    }
+    
+    func testCollections() {
+        let arrayTestValues: [Int] = [1,2,3,4]
+        let array = SyncLockObj<[Int]>(value: arrayTestValues)
+        XCTAssertEqual(array.count, arrayTestValues.count)
+        XCTAssertEqual(array.first, arrayTestValues.first)
+        XCTAssertEqual(array.last, arrayTestValues.last)
+        XCTAssertEqual(array[0], arrayTestValues[0])
+        array[array.startIndex] = 9
+        XCTAssertEqual(array[0], 9)
+        array.append(10)
+        
+        let dictTestValues: [String: Int] = ["1": 1, "2": 2, "3": 3, "4": 4]
+        let dict = SyncLockObj<[String: Int]>(value: dictTestValues)
+        XCTAssertEqual(dict["1"], dictTestValues["1"])
+        XCTAssertEqual(dict["0"], dictTestValues["0"])
+        XCTAssertEqual(dict["0", default: 0], dictTestValues["0", default: 0])
+        XCTAssertEqual(dict.count, dictTestValues.count)
+        dict["1"] = 9
+        XCTAssertEqual(dict["1"], 9)
+    }
 
-
+    func testDefaultInits() {
+        let _ = SyncLockObj<Bool?>()
+        let _ = SyncLockObj<[Int]>()
+        let _ = SyncLockObj<[String: Any]>()
+    }
+    
     static var allTests = [
         ("testLockable", testLockable),
-        ("testSyncObj", testSyncObj)
+        ("testSyncObj", testSyncObj),
+        ("testOperators", testOperators),
+        ("testCollections", testCollections),
+        ("testDefaultInits", testDefaultInits)
     ]
 }
